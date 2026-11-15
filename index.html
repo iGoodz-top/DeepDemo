@@ -1,0 +1,279 @@
+<!doctype html><html lang="zh-CN"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#ffffff"><title>iGood Studio | DeepDemo</title><link rel="icon" type="image/svg+xml" href="logo.svg"><meta content="0.1.1" name="application-version"><link href="api/api-config.css" rel="stylesheet"><script defer src="static/js/main.9820cd3a.js"></script><link href="static/css/main.7361e32c.css" rel="stylesheet"></head><body><div id="root"></div><script src="api/api-config.js"></script><script>
+(function(){
+'use strict';
+var KEY='chat-demo:api-key';
+var APP_BASE='api.deepseek.com';
+var APP_MODELS='https://'+APP_BASE+'/models';
+var APP_MESSAGES='https://'+APP_BASE+'/anthropic/v1/messages';
+
+var slot=document.createElement('div');
+var INLINE_CSS='display:flex;align-items:center;gap:6px;';
+slot.style.cssText='display:none';
+
+var api=new ApiConfig({
+  storageKey:'api_config_model_list',
+  selectorEl:slot,
+  modalEl:document.body,
+  lang:uiLang(),
+  themeAttr:'data-ds-dark-theme',
+  defaultSystem:'',
+  persistCurrent:true
+});
+document.body.appendChild(slot);
+if(api._modal)api._modal.style.zIndex='10000';
+window.acApi=api;
+
+function uiLang(){
+  var l=document.documentElement.lang||'';
+  if(/^en/i.test(l))return 'en';
+  if(/^zh/i.test(l))return 'zh';
+  var st=null;
+  try{st=localStorage.getItem('chat-demo:locale')}catch(e){}
+  if(st==='en-US')return 'en';
+  if(st==='zh-CN')return 'zh';
+  return (navigator.language||'zh').toLowerCase().indexOf('zh')===0?'zh':'en';
+}
+
+var GATE_PH=['请输入 API Key','Enter API Key'];
+function hideSlot(){
+  if(!document.contains(slot))document.body.appendChild(slot);
+  if(slot.getAttribute('data-ac-mode')!=='hidden'){
+    slot.setAttribute('data-ac-mode','hidden');
+    slot.style.cssText='display:none';
+  }
+}function pickCard(){
+  var cards=document.querySelectorAll('[class*="apiKey-"]');
+  var dlg=null,gate=null;
+  for(var i=0;i<cards.length;i++){
+    var c=cards[i];
+    if(c.closest('[role="dialog"]')){if(!dlg)dlg=c}
+    else if(!gate)gate=c;
+  }
+  if(dlg||gate)return dlg||gate;
+  var inputs=document.querySelectorAll('input');
+  for(var j=0;j<inputs.length;j++){
+    if(GATE_PH.indexOf(inputs[j].placeholder)>=0){
+      var row=inputs[j].closest('[class*="apiKeyInput"]')||inputs[j].parentElement;
+      if(row)return row.parentElement||row;
+    }
+  }
+  return null;
+}
+var OLD_NAMES=['API 使用 demo','API usage demo','iGoods-DeepDemo','iGood Studio | DeepDemo'];
+var PAGE_TITLE='iGood Studio | DeepDemo';
+var BRAND_TEXT='DeepDemo';
+function buildSub(el){
+  var side=el.closest('[class*="sider-"]');
+  if(!side)return;
+  var old=side.querySelector('[data-ac-brand-sub]');
+  if(old)old.parentNode.removeChild(old);
+  var isZh=uiLang()==='zh';
+  function link(txt,href){
+    var a=document.createElement('a');
+    a.href=href;a.target='_blank';a.rel='noopener';
+    a.textContent=txt;
+    a.style.cssText='color:var(--dsw-alias-brand-primary,#4D6BFE);text-decoration:none';
+    return a;
+  }
+  var sub=document.createElement('div');
+  sub.setAttribute('data-ac-brand-sub','1');
+  sub.setAttribute('data-ac-lang',isZh?'zh':'en');
+  sub.style.cssText='font-size:11px;line-height:1.65;opacity:.6;padding:0 10px 8px 10px;text-align:left;word-break:break-word';
+  var l1=document.createElement('div');
+  l1.appendChild(document.createTextNode(isZh?'本项目的 UI 界面基于 ':'The UI of this project is adapted from '));
+  l1.appendChild(link('DeepSeek Chat Demo','https://github.com/deepseek-ai/chat-demo'));
+  l1.appendChild(document.createTextNode(isZh?' 修改而来，遵循 MIT 开源协议。':' under the MIT License.'));
+  var l2=document.createElement('div');
+  l2.appendChild(document.createTextNode(isZh?'原作者版权归 ':'Original copyright belongs to '));
+  l2.appendChild(link('DeepSeek','https://github.com/deepseek-ai'));
+  l2.appendChild(document.createTextNode(isZh?' 所有。':'.'));
+  var l3=document.createElement('div');
+  l3.appendChild(document.createTextNode(isZh?'当前版本由 ':'Current version maintained and modified by '));
+  l3.appendChild(link('iGood Studio','https://github.com/igoodz-top'));
+  l3.appendChild(document.createTextNode(isZh?' 维护和修改。':'.'));
+  sub.appendChild(l1);sub.appendChild(l2);sub.appendChild(l3);
+  var bottom=side.querySelector('[class*="bottom-"]');
+  if(bottom)bottom.parentNode.insertBefore(sub,bottom);
+  else side.appendChild(sub);
+}
+function buildBrand(el){
+  el.textContent='';
+  el.style.display='inline-flex';
+  el.style.alignItems='center';
+  el.style.gap='7px';
+  var img=document.createElement('img');
+  img.src='logo.svg';
+  img.alt='';
+  img.style.cssText='width:22px;height:22px;border-radius:6px;display:block;flex:none';
+  var txt=document.createElement('span');
+  txt.textContent=BRAND_TEXT;
+  el.appendChild(img);
+  el.appendChild(txt);
+  buildSub(el);
+}
+function rename(){
+  var els=document.querySelectorAll('[class*="appName-"]');
+  var cur=uiLang();
+  for(var i=0;i<els.length;i++){
+    var e=els[i];
+    var side=e.closest('[class*="sider-"]');
+    var sub=side?side.querySelector('[data-ac-brand-sub]'):null;
+    var branded=e.getAttribute('data-ac-brand')==='1'&&!!e.querySelector('img');
+    var stale=sub&&sub.getAttribute('data-ac-lang')!==cur;
+    if(branded&&!stale)continue;
+    if(!branded&&OLD_NAMES.indexOf(e.textContent)<0&&e.textContent===BRAND_TEXT)continue;
+    e.setAttribute('data-ac-brand','1');
+    buildBrand(e);
+  }
+  if(document.title!==PAGE_TITLE)document.title=PAGE_TITLE;
+}
+function relocate(){
+  rename();
+  var card=pickCard();
+  if(!card){hideSlot();return}
+  var els=card.querySelectorAll('[class*="apiKeyInput"],[class*="apiKeySaved"],[class*="error-"]');
+  for(var i=0;i<els.length;i++){
+    if(els[i].style.display!=='none')els[i].style.display='none';
+  }
+  if(slot.parentElement!==card)card.appendChild(slot);
+  if(slot.getAttribute('data-ac-mode')!=='inline'){
+    slot.setAttribute('data-ac-mode','inline');
+    slot.style.cssText=INLINE_CSS;
+  }
+}
+var relocateScheduled=false;
+function scheduleRelocate(){
+  if(relocateScheduled)return;
+  relocateScheduled=true;
+  Promise.resolve().then(function(){
+    relocateScheduled=false;
+    relocate();
+  }).catch(function(){});
+}
+try{
+  new MutationObserver(scheduleRelocate).observe(document.body,{
+    childList:true,subtree:true,attributes:true,attributeFilter:['placeholder','class','style']
+  });
+}catch(e){relocate()}
+relocate();
+
+try{
+  new MutationObserver(function(muts){
+    muts.forEach(function(m){
+      if(m.attributeName!=='lang')return;
+      var lg=document.documentElement.lang||'';
+      if(api&&api.setLang)api.setLang(/^en/i.test(lg)?'en':'zh');
+      var sub=document.querySelector('[data-ac-brand-sub]');
+      if(sub)sub.remove();
+      var els=document.querySelectorAll('[class*="appName-"]');
+      for(var i=0;i<els.length;i++){
+        var e=els[i];
+        var side=e.closest('[class*="sider-"]');
+        if(side&&!side.querySelector('[data-ac-brand-sub]'))buildBrand(e);
+      }
+    });
+  }).observe(document.documentElement,{attributes:true,attributeFilter:['lang']});
+}catch(e){}
+
+try{
+  if(api.getCurrent()&&!localStorage.getItem(KEY))localStorage.setItem(KEY,'custom-model');
+}catch(e){}
+
+var unlocked=false;
+api.onChange(function(p){
+  var stored=null;
+  try{stored=localStorage.getItem(KEY)}catch(e){}
+  if(p.current&&!stored){
+    try{localStorage.setItem(KEY,'custom-model')}catch(e){}
+    if(!unlocked){unlocked=true;setTimeout(function(){try{location.reload()}catch(e){}},350)}
+  }
+  if(!p.current&&stored==='custom-model'){
+    try{localStorage.removeItem(KEY)}catch(e){}
+    setTimeout(function(){try{location.reload()}catch(e){}},350)
+  }
+});
+
+var orig=window.fetch.bind(window);
+var bridgeSignals=new WeakSet();
+
+function toOpenAI(msgs){
+  return (msgs||[]).filter(function(msg){
+    return msg && msg.role!=='system';
+  }).map(function(msg){
+    if(typeof msg.content==='string')return {role:msg.role,content:msg.content};
+    var parts=[];
+    (msg.content||[]).forEach(function(b){
+      if(!b)return;
+      if(b.type==='text'&&typeof b.text==='string')parts.push({type:'text',text:b.text});
+      else if(b.type==='image'&&b.source&&b.source.type==='base64')parts.push({type:'image_url',image_url:{url:'data:'+(b.source.media_type||'image/png')+';base64,'+b.source.data}});
+    });
+    if(!parts.length)parts.push({type:'text',text:'[attachment skipped: not supported by custom endpoint]'});
+    return {role:msg.role,content:parts};
+  });
+}
+
+function reroute(m,body,appSignal){
+  var ctrl=new AbortController();
+  bridgeSignals.add(ctrl.signal);
+  if(appSignal){
+    if(appSignal.aborted)ctrl.abort();
+    else appSignal.addEventListener('abort',function(){ctrl.abort()});
+  }
+  var model={
+    uid:m.uid,format:m.format,base:m.base,modelId:m.modelId,showName:m.showName,
+    key:m.key,temp:m.temp,maxTokens:body.max_tokens||m.maxTokens,system:m.system||''
+  };
+  var msgs=toOpenAI(body.messages);
+  var enc=new TextEncoder();
+  var stream=new ReadableStream({
+    start:function(c){
+      var thinkIdx=-1,textIdx=-1,next=0,out=0;
+      function ev(type,obj){c.enqueue(enc.encode('event: '+type+'\ndata: '+JSON.stringify(obj)+'\n\n'))}
+      function closeT(){if(thinkIdx>=0){ev('content_block_stop',{type:'content_block_stop',index:thinkIdx});thinkIdx=-1}}
+      function openT(){if(thinkIdx<0){closeT();thinkIdx=next++;ev('content_block_start',{type:'content_block_start',index:thinkIdx,content_block:{type:'thinking',thinking:'',signature:''}})}}
+      function openX(){if(textIdx<0){closeT();textIdx=next++;ev('content_block_start',{type:'content_block_start',index:textIdx,content_block:{type:'text',text:'',citations:[]}})}}
+      ev('message_start',{type:'message_start',message:{id:'msg_bridge',type:'message',role:'assistant',model:m.modelId,usage:{input_tokens:0,output_tokens:0}}});
+      api.streamChat({
+        model:model,
+        messages:msgs,
+        signal:ctrl.signal,
+        maxTokens:model.maxTokens,
+        onDelta:function(piece){openX();out++;ev('content_block_delta',{type:'content_block_delta',index:textIdx,delta:{type:'text_delta',text:piece}})},
+        onReasoning:function(piece){openT();ev('content_block_delta',{type:'content_block_delta',index:thinkIdx,delta:{type:'thinking_delta',thinking:piece}})}
+      }).then(function(){
+        closeT();
+        if(textIdx>=0)ev('content_block_stop',{type:'content_block_stop',index:textIdx});
+        ev('message_delta',{type:'message_delta',delta:{stop_reason:'end_turn'},usage:{input_tokens:0,output_tokens:out}});
+        ev('message_stop',{type:'message_stop'});
+        c.close();
+      }).catch(function(e){
+        closeT();
+        if(textIdx>=0)ev('content_block_stop',{type:'content_block_stop',index:textIdx});
+        ev('error',{error:{message:(e&&e.message)||String(e)}});
+        c.close();
+      });
+    }
+  });
+  return Promise.resolve(new Response(stream,{status:200,headers:{'Content-Type':'text/event-stream'}}));
+}
+
+window.fetch=function(input,init){
+  var url='';
+  try{
+    if(init&&bridgeSignals.has(init.signal))return orig(input,init);
+    url=(typeof input==='string'||(typeof URL!=='undefined'&&input instanceof URL))?String(input):(input&&input.url)||'';
+  }catch(e){return orig(input,init)}
+  var m=api.getCurrent();
+  if(!m)return orig(input,init);
+  if(url===APP_MODELS||(url.indexOf(APP_BASE+'/models')===0&&url.indexOf('/anthropic/')<0)){
+    return Promise.resolve(new Response('{"data":[]}',{status:200,headers:{'Content-Type':'application/json'}}));
+  }
+  if(url===APP_MESSAGES&&init&&init.method==='POST'&&typeof init.body==='string'){
+    var body=null;
+    try{body=JSON.parse(init.body)}catch(e){return orig(input,init)}
+    if(body&&body.messages)return reroute(m,body,init.signal);
+  }
+  return orig(input,init);
+};
+})();
+</script></body></html>
