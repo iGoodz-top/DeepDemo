@@ -2,7 +2,7 @@
 
 # iGood Studio | DeepDemo
 
-[English](README.md) | [简体中文](README_ZH.md)
+[English](README.md) | 简体中文
 
 本项目的 UI 界面基于 [DeepSeek Chat Demo](https://github.com/deepseek-ai/chat-demo)（v0.1.1 官方构建产物）修改而来，遵循 MIT 开源协议。原作者版权归 [DeepSeek](https://github.com/deepseek-ai) 所有，当前版本由 [iGood Studio](https://github.com/igoodz-top) 维护和修改。
 
