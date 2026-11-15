@@ -2,7 +2,7 @@
 
 # iGood Studio | DeepDemo
 
-[English]| [简体中文](README_ZH.md)
+English| [简体中文](README_ZH.md)
 
 The UI of this project is adapted from [DeepSeek Chat Demo](https://github.com/deepseek-ai/chat-demo) (official v0.1.1 build) under the MIT License. Original copyright belongs to [DeepSeek](https://github.com/deepseek-ai). The current version is maintained and modified by [iGood Studio](https://github.com/igoodz-top).
 
