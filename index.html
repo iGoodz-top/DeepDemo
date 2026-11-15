@@ -196,9 +196,10 @@ api.onChange(function(p){
 var orig=window.fetch.bind(window);
 var bridgeSignals=new WeakSet();
 
+var ROLES_OK={user:1,assistant:1};
 function toOpenAI(msgs){
   return (msgs||[]).filter(function(msg){
-    return msg && msg.role!=='system';
+    return msg && ROLES_OK[msg.role];
   }).map(function(msg){
     if(typeof msg.content==='string')return {role:msg.role,content:msg.content};
     var parts=[];
