@@ -1,4 +1,4 @@
-<p align="left"><img src="logo.svg" alt="iGood Studio" width="72" height="72"/></p>
+<p align="left"><img src="logo.svg" alt="iGood Studio" width="300" height="300"/></p>
 
 # iGood Studio | DeepDemo
 
